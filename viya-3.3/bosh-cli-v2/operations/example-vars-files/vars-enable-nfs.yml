@@ -1,0 +1,5 @@
+nfs:
+  fstab: |
+    host1:/directory1 /local/path/1 nfs
+    host2:/directory2 /local/path/2 nfs
+

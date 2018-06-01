@@ -1,0 +1,74 @@
+---
+- type: remove
+  path: /instance_groups/name=consul
+
+- type: remove
+  path: /instance_groups/name=postgresql
+
+- type: remove
+  path: /instance_groups/name=pgpool
+
+- type: remove
+  path: /instance_groups/name=rabbitmq
+
+- type: remove
+  path: /instance_groups/name=cachelocator
+
+- type: remove
+  path: /instance_groups/name=cacheserver
+
+# clean up cas
+- type: remove
+  path: /instance_groups/name=cas_controller/jobs/name=consul
+
+- type: remove
+  path: /instance_groups/name=cas_controller/properties/cas/config/servicesbaseurl
+
+- type: remove
+  path: /instance_groups/name=cas_worker/jobs/name=consul
+
+# clean up spawner
+- type: remove
+  path: /instance_groups/name=spawner_compute/jobs/name=consul
+
+- type: remove
+  path: /instance_groups/name=spawner_compute/jobs/name=compute_server
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/name
+  value: object_spawner
+
+# clean up microservices
+- type: remove
+  path: /instance_groups/name=microservices/jobs/name=install_analytics
+- type: remove
+  path: /instance_groups/name=microservices/jobs/name=install_datamgmt
+- type: remove
+  path: /instance_groups/name=microservices/jobs/name=install_va
+- type: remove
+  path: /instance_groups/name=microservices/jobs/name=install_platform
+- type: remove
+  path: /instance_groups/name=microservices/jobs/name=install_modeling
+- type: remove
+  path: /instance_groups/name=microservices/properties/consul
+
+- type: remove
+  path: /properties/sas/logon
+- type: remove
+  path: /properties/sas/services
+- type: remove
+  path: /properties/consul
+
+- type: replace
+  path: /releases
+  value:
+    - {name: sas-bshvdmmlcas-ubuntu, version: latest}
+    - {name: sas-bshvdmmlsas-ubuntu, version: latest}
+    - {name: sas-bshjava-ubuntu, version: latest}
+    - {name: sas-bshnfs-ubuntu, version: latest}
+    - {name: sas-bshnuma-ubuntu, version: latest}
+    - {name: sas-bshsssd-ubuntu, version: latest}
+    - {name: sas-bshpkginst-ubuntu, version: latest}
+    - {name: sas-bshlibpng-ubuntu, version: latest}
+    - {name: sas-bshdeploymic-ubuntu, version: latest}
+    - {name: sas-bshstudiomic-ubuntu, version: latest}

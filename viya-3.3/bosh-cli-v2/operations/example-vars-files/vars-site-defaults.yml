@@ -1,0 +1,10 @@
+ldap:
+  host: ldap-host
+  port: ldap-port
+  user: ldap-dn-for-query-user
+  password: ldap-password-for-query-user
+  userBase: ldap-base-for-users
+  groupBase: ldap-base-for-groups
+
+oauth2:
+  adminId: sas.oauth.admin

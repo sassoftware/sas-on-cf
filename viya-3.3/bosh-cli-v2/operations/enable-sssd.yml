@@ -1,0 +1,47 @@
+- type: replace
+  path: /releases/-
+  value:
+    name: sas-bshsssd-ubuntu
+    version: latest
+
+- type: replace
+  path: /instance_groups/name=cas_controller/jobs/-
+  value:
+    name: install_config_sssd
+    release: sas-bshsssd-ubuntu
+
+- type: replace
+  path: /instance_groups/name=cas_controller/properties/sssd?/conf
+  value: ((sssd_conf))
+
+- type: replace
+  path: /instance_groups/name=cas_controller/properties/sssd?/cert
+  value: ((sssd_cert))
+
+- type: replace
+  path: /instance_groups/name=cas_worker/jobs/-
+  value:
+    name: install_config_sssd
+    release: sas-bshsssd-ubuntu
+
+- type: replace
+  path: /instance_groups/name=cas_worker/properties?/sssd/conf
+  value: ((sssd_conf))
+
+- type: replace
+  path: /instance_groups/name=cas_worker/properties?/sssd/cert
+  value: ((sssd_cert))
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/jobs/-
+  value:
+    name: install_config_sssd
+    release: sas-bshsssd-ubuntu
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/properties/sssd?/conf
+  value: ((sssd_conf))
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/properties/sssd?/cert
+  value: ((sssd_cert))

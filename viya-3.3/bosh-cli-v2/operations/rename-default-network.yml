@@ -1,0 +1,39 @@
+- type: replace
+  path: /instance_groups/name=consul/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=postgresql/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=pgpool/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=rabbitmq/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=cachelocator/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=cacheserver/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=cas_controller/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=cas_worker/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/networks/name=default/name
+  value: ((default_network_name))
+
+- type: replace
+  path: /instance_groups/name=microservices/networks/name=default/name
+  value: ((default_network_name))

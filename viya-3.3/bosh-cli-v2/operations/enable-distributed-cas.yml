@@ -1,0 +1,8 @@
+---
+- type: replace
+  path: /instance_groups/name=cas_worker/instances
+  value: ((cas.worker.count))
+
+- type: replace
+  path: /instance_groups/name=cas_controller/properties/cas/config/mode
+  value: mpp

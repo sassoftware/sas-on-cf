@@ -1,0 +1,124 @@
+#!/bin/bash
+
+set -ue
+
+exit_code=0
+GREEN='\033[0;32m'
+LIGHT_GREEN='\033[0;92m'
+RED='\033[0;31m'
+LIGHT_RED='\033[1;31m'
+YELLOW='\033[0;93m'
+NOCOLOR='\033[0m'
+
+: "${RUN_SEMANTIC:="false"}"
+
+script_home="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+home="$( cd "${script_home}/.." && pwd )"
+
+# suite_name should be defined by each of our test suite functions
+suite_name="UNDEFINED"
+
+# Grab each of our test suites, exercised by test_opsfile_interpolation()
+for script in `ls ${script_home}/*.sh`; do
+  source $script
+done
+
+# If we get killed, kill backgrounded processes
+trap 'kill $(jobs -p) > /dev/null 2>&1' SIGTERM SIGINT
+
+fail() {
+  echo -e "${RED} FAIL - ${LIGHT_RED} $suite_name ${RED} - ${NOCOLOR} $1"
+  exit_code=1
+}
+
+pass() {
+  echo -e "${GREEN} PASS - ${YELLOW} $suite_name ${GREEN} - ${NOCOLOR} $1"
+}
+
+interpolate() {
+  bosh interpolate ${home}/deployment-manifest.yml $@ > /dev/null
+  return $?
+}
+
+check_interpolation() {
+  if [[ ${1} == name:* ]]; then
+    name_under_test=$1
+    empty_string=""
+    ops_under_test="${name_under_test/name: /$empty_string}"; shift
+  else
+    ops_under_test="${1}"
+  fi
+
+  if interpolate "-o $@"; then
+    pass "${ops_under_test}"
+  else
+    fail "${ops_under_test}"
+  fi
+}
+
+test_opsfile_interpolation() {
+  test_standard_ops &
+  test_centos_ops &
+
+  for job in $(jobs -p); do
+    wait $job || exit_code=1
+  done
+}
+
+ensure_opsfiles_in_readme() {
+  local readme=$1
+  shift
+
+  suite_name="$readme"
+
+  pushd ${home} > /dev/null
+    for x in $@; do
+      local basename=$(basename $x)
+      if [ $(grep \($basename\) $readme -c) != "0" ]; then
+        pass "$x is in $readme"
+      else
+        fail "$x does not appear in $readme"
+      fi
+    done;
+  popd > /dev/null
+}
+
+ensure_opsfiles_in_tests() {
+  local test=$1
+  shift
+
+  suite_name="$test"
+
+  pushd ${home} > /dev/null
+    for x in $@; do
+      local basename=$(basename $x)
+      if [ $(grep $basename $test -c) != "0" ]; then
+        pass "$x is tested in $test"
+      else
+        fail "$x is ${RED}NOT${NOCOLOR} tested in $test"
+      fi
+    done;
+  popd > /dev/null
+}
+
+main() {
+  pushd $home > /dev/null
+    echo
+    echo -e "${LIGHT_GREEN} ***** Begin affirmative readme operations tests ***** ${NOCOLOR}"
+    ensure_opsfiles_in_readme "operations/README.md" $(ls operations/*.yml)
+
+    echo
+    echo -e "${LIGHT_GREEN} ***** Begin test coverage analysis ***** ${NOCOLOR}"
+    ensure_opsfiles_in_tests "scripts/test-standard-ops.sh" $(ls operations/*.yml | grep -v centos)
+    ensure_opsfiles_in_tests "scripts/test-centos-ops.sh" $(ls operations/*centos.yml)
+
+    echo
+    echo -e "${LIGHT_GREEN} ***** Begin interpolation operations tests ***** ${NOCOLOR}"
+    test_opsfile_interpolation
+  popd > /dev/null
+
+  exit $exit_code
+}
+
+main
+

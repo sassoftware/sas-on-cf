@@ -1,0 +1,120 @@
+- type: replace
+  path: /name
+  value: sas-vdmml-centos
+
+- type: replace
+  path: /stemcells/alias=default/os
+  value: centos-7
+
+- type: replace
+  path: /releases
+  value:
+  - {name: sas-bshconsul-redhat, version: latest}
+  - {name: sas-bshpostgres-redhat, version: latest}
+  - {name: sas-bshpgpool-redhat, version: latest}
+  - {name: sas-bshrabbitmq-redhat, version: latest}
+  - {name: sas-bshvdmmlcas-redhat, version: latest}
+  - {name: sas-bshvdmmlsas-redhat, version: latest}
+  - {name: sas-bshgeode-redhat, version: latest}
+  - {name: sas-bshjava-redhat, version: latest}
+  - {name: sas-bshnuma-redhat, version: latest}
+  - {name: sas-bshsssd-redhat, version: latest}
+  - {name: sas-bshpkginst-redhat, version: latest}
+  - {name: sas-bshlibpng-redhat, version: latest}
+  - {name: sas-bshdeploymic-redhat, version: latest}
+  - {name: sas-bshpltfmmic-redhat, version: latest}
+  - {name: sas-bshdatmgtmic-redhat, version: latest}
+  - {name: sas-bshanlytcmic-redhat, version: latest}
+  - {name: sas-bshvamic-redhat, version: latest}
+  - {name: sas-bshmodelmic-redhat, version: latest}
+  - {name: sas-bshstudiomic-redhat, version: latest}
+
+- type: replace
+  path: /instance_groups/name=consul/jobs
+  value:
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: load_consul_data, release: sas-bshconsul-redhat}
+
+- type: replace
+  path: /instance_groups/name=postgresql/jobs
+  value:
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: postgresql, release: sas-bshpostgres-redhat}
+
+- type: replace
+  path: /instance_groups/name=pgpool/jobs
+  value:
+  - {name: pgpool, release: sas-bshpgpool-redhat}
+  - {name: consul, release: sas-bshconsul-redhat}
+
+- type: replace
+  path: /instance_groups/name=rabbitmq/jobs
+  value:
+  - {name: rabbitmq, release: sas-bshrabbitmq-redhat}
+  - {name: consul, release: sas-bshconsul-redhat}
+
+- type: replace
+  path: /instance_groups/name=cachelocator/jobs
+  value:
+  - {name: install_java, release: sas-bshjava-redhat}
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: cachelocator, release: sas-bshgeode-redhat}
+
+- type: replace
+  path: /instance_groups/name=cacheserver/jobs
+  value:
+  - {name: install_java, release: sas-bshjava-redhat}
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: cacheserver, release: sas-bshgeode-redhat}
+
+- type: replace
+  path: /instance_groups/name=cas_controller/jobs
+  value:
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: install_config_sssd, release: sas-bshsssd-redhat}
+  - {name: install_java, release: sas-bshjava-redhat}
+  - {name: install_numa, release: sas-bshnuma-redhat}
+  - name: cas_controller
+    release: sas-bshvdmmlcas-redhat
+    provides:
+      controller: {as: cas_controller}
+
+- type: replace
+  path: /instance_groups/name=cas_worker/jobs
+  value:
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: install_config_nfs, release: sas-bshnfs-redhat}
+  - {name: install_config_sssd, release: sas-bshsssd-redhat}
+  - {name: install_java, release: sas-bshjava-redhat}
+  - {name: install_numa, release: sas-bshnuma-redhat}
+  - {name: install_packages, release: sas-bshpkginst-redhat}
+  - name: cas_worker
+    release: sas-bshvdmmlcas-redhat
+    consumes:
+      controller: {from: cas_controller}
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/jobs
+  value:
+  - {name: consul, release: sas-bshconsul-redhat}
+  - {name: install_java, release: sas-bshjava-redhat}
+  - {name: install_config_sssd, release: sas-bshsssd-redhat}
+  - {name: install_numa, release: sas-bshnuma-redhat}
+  - {name: install_libpng, release: sas-bshlibpng-redhat}
+  - {name: install_packages, release: sas-bshpkginst-redhat}
+  - name: object_spawner
+    release: sas-bshvdmmlsas-redhat
+  - name: compute_server
+    release: sas-bshvdmmlsas-redhat
+
+- type: replace
+  path: /instance_groups/name=microservices/jobs
+  value:
+  - {name: sas-microservices-deploy, release: sas-bshdeploymic-redhat}
+  - {name: install_datamgmt, release: sas-bshdatmgtmic-redhat}
+  - {name: install_modeling, release: sas-bshmodelmic-redhat}
+  - {name: install_analytics, release: sas-bshanlytcmic-redhat}
+  - {name: install_platform, release: sas-bshpltfmmic-redhat}
+  - {name: install_va, release: sas-bshvamic-redhat}
+  - {name: install_studio, release: sas-bshstudiomic-redhat}
+

@@ -1,0 +1,38 @@
+sas:
+  spawner:
+    ip: 1.1.1.1
+    ips:
+    - 1.1.1.1
+
+cas:
+  controller:
+    ips:
+    - 2.2.2.2
+# cas.worker.ips only required for distributed CAS
+  worker:
+    ips: []
+
+cache:
+  server:
+    ips:
+    - 3.3.3.3
+  locator:
+    ips:
+    - 4.4.4.4
+
+rabbitmq:
+  ips:
+  - 5.5.5.5
+
+consul:
+  ip: 6.6.6.6
+  ips:
+  - 6.6.6.6
+
+db:
+  pgpool:
+    ips:
+    - 7.7.7.7
+  postgres:
+    ips: 
+    - 8.8.8.8

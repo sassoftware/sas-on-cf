@@ -1,0 +1,19 @@
+application_domain: domain-for-applications
+
+servicesbaseurl: http(s)://((cf.deployment.host)).((application_domain))
+
+cf:
+  api:
+    org: org-for-app-deployment
+    space: space-for-app-deployment
+    username: userid-for-app-deployment
+    password: password-for-app-deployment
+    url: api-url-for-cf
+    skip_ssl_validation: true
+  app:
+    prefix: prefix-for-unique-app-names
+  deployment:
+    host: host-for-applications
+    domains:
+    - ((application_domain))
+    port: 80-or-443

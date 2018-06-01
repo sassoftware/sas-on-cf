@@ -1,0 +1,274 @@
+---
+name: sas-vdmml-ubuntu
+
+releases:
+- {name: sas-bshconsul-ubuntu, version: latest}
+- {name: sas-bshpostgres-ubuntu, version: latest}
+- {name: sas-bshpgpool-ubuntu, version: latest}
+- {name: sas-bshrabbitmq-ubuntu, version: latest}
+- {name: sas-bshvdmmlcas-ubuntu, version: latest}
+- {name: sas-bshvdmmlsas-ubuntu, version: latest}
+- {name: sas-bshgeode-ubuntu, version: latest}
+- {name: sas-bshjava-ubuntu, version: latest}
+- {name: sas-bshnuma-ubuntu, version: latest}
+- {name: sas-bshpkginst-ubuntu, version: latest}
+- {name: sas-bshlibpng-ubuntu, version: latest}
+- {name: sas-bshdeploymic-ubuntu, version: latest}
+- {name: sas-bshpltfmmic-ubuntu, version: latest}
+- {name: sas-bshdatmgtmic-ubuntu, version: latest}
+- {name: sas-bshanlytcmic-ubuntu, version: latest}
+- {name: sas-bshvamic-ubuntu, version: latest}
+- {name: sas-bshmodelmic-ubuntu, version: latest}
+
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: 3468.22
+
+update:
+  canaries: 0
+  max_in_flight: 3
+  canary_watch_time: 15000-300000
+  update_watch_time: 15000-300000
+
+instance_groups:
+- name: consul
+  instances: 1
+  jobs:
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: load_consul_data, release: sas-bshconsul-ubuntu}
+  vm_type: minimal
+  stemcell: default
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    consul:
+      server: true
+      ui_enabled: true
+      tokens:
+        management: ((consul_tokens_management))
+      key_value_data: |
+        config:
+          application:
+            oauth2:
+              adminId: sas.oauth.admin
+              adminSecret: ((oauth2_admin_password))
+            sas:
+              url:
+                httpd: ((servicesbaseurl))
+
+- name: postgresql
+  instances: 1
+  jobs:
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: postgresql, release: sas-bshpostgres-ubuntu}
+  vm_type: small
+  stemcell: default
+  persistent_disk_type: 10GB
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    pgpool:
+      default:
+        password: '((db_user_password))'
+      instance:
+        password: '((db_user_password))'
+    postgres:
+      password: '((db_user_password))'
+      replication:
+        password: '((db_replication_password))'
+
+- name: pgpool
+  instances: 1
+  jobs:
+  - {name: pgpool, release: sas-bshpgpool-ubuntu}
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  vm_type: minimal
+  stemcell: default
+  persistent_disk_type: 5GB
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    pgpool:
+      config:
+        enable_pool_hba: on
+      datamining:
+        password: '((db_user_password))'
+      default:
+        password: '((db_user_password))'
+      pcp:
+        system_password: '((db_pcp_system_password))'
+
+- name: rabbitmq
+  instances: 1
+  jobs:
+  - {name: rabbitmq, release: sas-bshrabbitmq-ubuntu}
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  vm_type: small
+  stemcell: default
+  networks:
+  - name: default
+    default: [dns, gateway]
+
+- name: cachelocator
+  instances: 1
+  jobs:
+  - {name: install_java, release: sas-bshjava-ubuntu}
+  - {name: install_packages, release: sas-bshpkginst-ubuntu}
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: cachelocator, release: sas-bshgeode-ubuntu}
+  stemcell: default
+  vm_type: small
+  networks:
+  - name: default
+    default: [dns, gateway]
+
+- name: cacheserver
+  instances: 1
+  jobs:
+  - {name: install_java, release: sas-bshjava-ubuntu}
+  - {name: install_packages, release: sas-bshpkginst-ubuntu}
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: cacheserver, release: sas-bshgeode-ubuntu}
+  stemcell: default
+  vm_type: small
+  networks:
+  - name: default
+    default: [dns, gateway]
+
+- name: cas_controller
+  instances: 1
+  jobs:
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: install_java, release: sas-bshjava-ubuntu}
+  - {name: install_numa, release: sas-bshnuma-ubuntu}
+  - {name: install_packages, release: sas-bshpkginst-ubuntu}
+  - name: cas_controller
+    release: sas-bshvdmmlcas-ubuntu
+    provides:
+      controller: {as: cas_controller}
+  vm_type: cas
+  persistent_disk_type: 10GB
+  stemcell: default
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    cas:
+      key: ((cas_key))
+      config:
+        mode: smp
+        servicesbaseurl: ((servicesbaseurl))
+    sas:
+      setinit:
+        text: ((sas_setinit_text))
+
+- name: cas_worker
+  instances: 0
+  jobs:
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: install_config_nfs, release: sas-bshnfs-ubuntu}
+  - {name: install_java, release: sas-bshjava-ubuntu}
+  - {name: install_numa, release: sas-bshnuma-ubuntu}
+  - {name: install_packages, release: sas-bshpkginst-ubuntu}
+  - name: cas_worker
+    release: sas-bshvdmmlcas-ubuntu
+    consumes:
+      controller: {from: cas_controller}
+  vm_type: cas
+  stemcell: default
+  persistent_disk_type: 10GB
+  networks:
+  - name: default
+    default: [dns, gateway]
+
+- name: spawner_compute
+  instances: 1
+  jobs:
+  - {name: consul, release: sas-bshconsul-ubuntu}
+  - {name: install_java, release: sas-bshjava-ubuntu}
+  - {name: install_numa, release: sas-bshnuma-ubuntu}
+  - {name: install_libpng, release: sas-bshlibpng-ubuntu}
+  - {name: install_packages, release: sas-bshpkginst-ubuntu}
+  - name: object_spawner
+    release: sas-bshvdmmlsas-ubuntu
+  - name: compute_server
+    release: sas-bshvdmmlsas-ubuntu
+  vm_type: large
+  stemcell: default
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    sas:
+      setinit:
+        text: ((sas_setinit_text))
+
+- name: microservices
+  instances: 1
+  jobs:
+  - {name: sas-microservices-deploy, release: sas-bshdeploymic-ubuntu}
+  - {name: install_datamgmt, release: sas-bshdatmgtmic-ubuntu}
+  - {name: install_modeling, release: sas-bshmodelmic-ubuntu}
+  - {name: install_analytics, release: sas-bshanlytcmic-ubuntu}
+  - {name: install_platform, release: sas-bshpltfmmic-ubuntu}
+  - {name: install_va, release: sas-bshvamic-ubuntu}
+  vm_type: large
+  stemcell: default
+  persistent_disk_type: 50GB
+  lifecycle: errand
+  networks:
+  - name: default
+    default: [dns, gateway]
+  properties:
+    cf:
+      api:
+        org: ((cf.api.org))
+        space: ((cf.api.space))
+        username: ((cf.api.username))
+        password: ((cf.api.password))
+        url: ((cf.api.url))
+        skip_ssl_validation: ((cf.api.skip_ssl_validation))
+      app:
+        prefix: ((cf.app.prefix))
+      deployment:
+        host: ((cf.deployment.host))
+        domains: ((cf.deployment.domains))
+        port: ((cf.deployment.port))
+    consul:
+      hostname: ((consul.ip))
+
+properties:
+  consul:
+    join_hosts: ((consul.ips))
+    server: false
+    tokens:
+      client: ((consul_tokens_client))
+  sas:
+    logon:
+      initial:
+        password: ((sas_logon_initial_password))
+    services:
+      url: ((servicesbaseurl))
+
+variables:
+- name: oauth2_admin_password
+  type: password
+- name: db_user_password
+  type: password
+- name: db_replication_password
+  type: password
+- name: db_pcp_system_password
+  type: password
+- name: consul_tokens_management
+  type: password
+- name: consul_tokens_client
+  type: password
+- name: cas_key
+  type: password
+- name: sas_logon_initial_password
+  type: password
+

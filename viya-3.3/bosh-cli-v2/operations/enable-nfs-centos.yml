@@ -1,0 +1,26 @@
+- type: replace
+  path: /releases/-
+  value:
+    name: sas-bshnfs-redhat
+    version: latest
+
+- type: replace
+  path: /instance_groups/name=cas_controller/jobs/-
+  value:
+    name: install_config_nfs
+    release: sas-bshnfs-redhat
+
+- type: replace
+  path: /instance_groups/name=cas_controller/properties/nfs?/fstab?
+  value: ((nfs.fstab))
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/jobs/-
+  value:
+    name: install_config_nfs
+    release: sas-bshnfs-redhat
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/properties/nfs?/fstab?
+  value: ((nfs.fstab))
+

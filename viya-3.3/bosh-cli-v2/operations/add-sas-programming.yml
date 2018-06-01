@@ -1,0 +1,15 @@
+- type: replace
+  path: /releases/-
+  value:
+    name: sas-bshstudiomic-ubuntu
+    version: latest
+
+- type: replace
+  path: /instance_groups/name=microservices/jobs/-
+  value:
+    name: install_studio
+    release: sas-bshstudiomic-ubuntu
+
+- type: replace
+  path: /instance_groups/name=microservices/properties/sas?/object/spawner/host
+  value: ((sas.spawner.ip))

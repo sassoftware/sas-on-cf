@@ -1,0 +1,480 @@
+<%
+ # SAS Viya Deployment Manifest v1.1
+ # BOSH INFORMATION ##########################################################
+ # The director UUID can be identified from the BOSH command line:
+ # bosh status --uuid
+ director_uuid = ""
+
+ # bosh cloud-config
+ vm_type = ""
+ disk_type = ""
+ private_network_name = ""
+ public_network_name = ""
+
+ # Stemcell Management
+ centos_stemcell_name = "bosh-openstack-kvm-centos-7-go_agent"
+ centos_stemcell_version = "3468.22"
+ ubuntu_stemcell_name = "bosh-openstack-kvm-ubuntu-trusty-go_agent"
+ ubuntu_stemcell_version = "3468.22"
+
+ # The following is used as the stemcell value for the instance groups
+ #   Valid values for stemcell are ubuntu or centos
+ stemcell = "ubuntu"
+
+ # CLOUD FOUNDRY INFORMATION #################################################
+ # Used in deploying the micro-services
+ # Some of the following information can be gathered from the Cloud Foundry
+ # command line: cf target
+ cf_api_org = ""
+ cf_api_space = ""
+ cf_api_username = ""
+ cf_api_password = ""
+ cf_api_url = ""
+ cf_api_skip_ssl_validation = "true"
+ cf_app_prefix = ""
+ cf_deployment_host = ""
+ cf_deployment_domains = [""] # Array of domains to deploy to
+ cf_deployment_port = "80"
+
+ # IP ADDRESSES ##############################################################
+ # Collection of IPs that need to be acquired from the infrastructure
+ # i.e. OpenStack, AWS, etc.
+ sas_ip = ""
+ cas_controller_ip = ""
+ # The cas_worker_ip only needs to be provided if cas_mode == "mpp"
+ cas_worker_ips = ""
+ consul_ip = ""
+ rabbitmq_ip = ""
+ geode_locator_ip = ""
+ geode_server_ip = ""
+ pgpool_ip = ""
+ postgres_ip = ""
+
+ # JAVA CONFIGURATION ########################################################
+ # This value is only required if you are providing java through a means other
+ # than the SAS distributed BOSH release. For example, if you maintain your
+ # own java BOSH release or include java in a custom stemcell.
+ java_home = ""
+
+ # DEPLOYMENT TYPE DEFAULTS ##################################################
+ # When set to
+ #   true = deploy only SAS Studio, CAS and SAS Foundation
+ #   false = deploy everything
+ programming_only = false
+
+ # MICRO-SERVICE CONFIGURATION DEFAULTS ######################################
+ # Password for the sasboot user
+ sas_logon_initial_pwd = "s3cr3t"
+
+ # oauth client registration details
+ oauth_admin_id = "sas.oauth.admin"
+ oauth_admin_secret = "s3cr3t"
+
+ # CONSUL CONFIGURATION
+ consul_tokens_management = "tobeusedfordemosonlymgmt"
+ consul_tokens_client = "tobeusedfordemosonlyclnt"
+ consul_datacenter = "dc1"
+
+ # POSTGRES CONFIGURATION DEFAULTS ###########################################
+ db_user_pwd = "s3cr3t"
+ pcp_system_pwd = "s3cr3t"
+ replication_pwd = "s3cr3t"
+ datamining_pwd = "s3cr3t"
+ postgres_config_port = "6432"
+ pgpool_config_port = "5432"
+
+ # CAS CONFIGURATION DEFAULTS ################################################
+ # Valid values for cas_mode are smp or mpp
+ cas_mode = "smp"
+ cas_key = "REPLACE ME with unique text. This is used to allow CAS workers to talk to the CAS controller"
+
+ # If deploying behind an SSL enabled load balancer, change to https.
+ servicesbaseurl = "http://" + cf_deployment_host + "." + cf_deployment_domains[0]
+
+ # DO NOT CHANGE ANYTHING BELOW THIS LINE ####################################
+ package_type = stemcell
+ if stemcell == "centos" then
+   package_type = "redhat"
+ end
+
+ if java_home == "" then
+   if stemcell == "centos" then
+     java_home = "/usr/lib/jvm/jre-1.8.0"
+   else
+     java_home = "/usr/lib/jvm/java-8-openjdk-amd64/jre"
+   end
+ end
+
+ cas_worker_count = cas_worker_ips.chomp.split(",").length
+ # DO NOT CHANGE ANYTHING ABOVE THIS LINE ####################################
+%>
+
+---
+name: sas-vdmml-<%= stemcell %>
+version: dev
+director_uuid: <%= director_uuid %>
+uncommitted_changes: true
+
+releases:
+- {name: sas-bshconsul-<%= package_type %>, version: latest}
+- {name: sas-bshgeode-<%= package_type %>, version: latest}
+- {name: sas-bshjava-<%= package_type %>, version: latest}
+- {name: sas-bshlibpng-<%= package_type %>, version: latest}
+- {name: sas-bshnfs-<%= package_type %>, version: latest}
+- {name: sas-bshnuma-<%= package_type %>, version: latest}
+- {name: sas-bshpgpool-<%= package_type %>, version: latest}
+<% if package_type == "ubuntu" %>
+- {name: sas-bshpkginst-<%= package_type %>, version: latest}
+<% end %>
+- {name: sas-bshpostgres-<%= package_type %>, version: latest}
+- {name: sas-bshrabbitmq-<%= package_type %>, version: latest}
+- {name: sas-bshsssd-<%= package_type %>, version: latest}
+- {name: sas-bshvdmmlcas-<%= package_type %>, version: latest}
+- {name: sas-bshdeploymic-<%= package_type %>, version: latest}
+- {name: sas-bshvamic-<%= package_type %>, version: latest}
+- {name: sas-bshanlytcmic-<%= package_type %>, version: latest}
+- {name: sas-bshdatmgtmic-<%= package_type %>, version: latest}
+- {name: sas-bshmodelmic-<%= package_type %>, version: latest}
+- {name: sas-bshstudiomic-<%= package_type %>, version: latest}
+- {name: sas-bshpltfmmic-<%= package_type %>, version: latest}
+- {name: sas-bshvdmmlsas-<%= package_type %>, version: latest}
+
+stemcells:
+- alias: ubuntu
+  name: <%= ubuntu_stemcell_name %>
+  version: <%= ubuntu_stemcell_version %>
+- alias: centos
+  name: <%= centos_stemcell_name %>
+  version: <%= centos_stemcell_version %>
+
+update:
+  canaries: 0
+  max_in_flight: 3
+  canary_watch_time: 15000-300000
+  update_watch_time: 15000-300000
+
+instance_groups:
+<% if programming_only == false %>
+- name: consul
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  - {name: load_consul_data, release: sas-bshconsul-<%= package_type %>}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= consul_ip %>]
+  properties:
+    consul:
+      server: true
+      tokens:
+        management: <%= consul_tokens_management %>
+      # For information to put in here, please review the deployment guide
+      key_value_data: |
+        config:
+          application:
+            sas:
+              url:
+                httpd: <%= servicesbaseurl %>
+            oauth2:
+              adminId: <%= oauth_admin_id %>
+              adminSecret: <%= oauth_admin_secret %>
+<% end %>
+
+- name: microservices
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: sas-microservices-deploy, release: sas-bshdeploymic-<%= package_type %>}
+<% if programming_only == false %>
+  - {name: install_analytics, release: sas-bshanlytcmic-<%= package_type %>}
+  - {name: install_datamgmt, release: sas-bshdatmgtmic-<%= package_type %>}
+  - {name: install_modeling, release: sas-bshmodelmic-<%= package_type %>}
+  - {name: install_platform, release: sas-bshpltfmmic-<%= package_type %>}
+  - {name: install_va, release: sas-bshvamic-<%= package_type %>}
+<% end %>
+  - {name: install_studio, release: sas-bshstudiomic-<%= package_type %>}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  lifecycle: errand
+  persistent_disk_type: <%= disk_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  properties:
+    cf:
+      api:
+        org: <%= cf_api_org %>
+        space: <%= cf_api_space %>
+        username: <%= cf_api_username %>
+        password: <%= cf_api_password %>
+        url: <%= cf_api_url %>
+        skip_ssl_validation: <%= cf_api_skip_ssl_validation %>
+      app:
+        prefix: <%= cf_app_prefix %>
+      deployment:
+        host: <%= cf_deployment_host %>
+        domains: <% cf_deployment_domains.each do |domain| %>
+        - <%= domain %>
+<% end %>
+        port: <%= cf_deployment_port %>
+    consul:
+      hostname: <%= consul_ip %>
+    sas:
+      object:
+        spawner:
+          host: <%= sas_ip %>
+<% if programming_only == true %>
+      app:
+        programming:
+          only: true
+<% end %>
+
+<% if programming_only == false %>
+- name: postgresql
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  - {name: postgresql, release: sas-bshpostgres-<%= package_type %>}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= postgres_ip %>]
+  properties:
+    postgres:
+      password: '<%= db_user_pwd %>'
+      replication:
+        password: '<%= replication_pwd %>'
+      config:
+        port: <%= postgres_config_port %>
+    pgpool:
+      default:
+        password: '<%= db_user_pwd %>'
+      instance:
+        password: '<%= db_user_pwd %>'
+      datamining:
+        password: '<%= datamining_pwd %>'
+
+- name: pgpool
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: pgpool, release: sas-bshpgpool-<%= package_type %>}
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= pgpool_ip %>]
+  properties:
+    pgpool:
+      default:
+        password: '<%= db_user_pwd %>'
+      config:
+        port: <%= pgpool_config_port %>
+        enable_pool_hba: on
+      pcp:
+        system_password: '<%= pcp_system_pwd %>'
+      datamining:
+        password: '<%= datamining_pwd %>'
+
+- name: rabbitmq
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: rabbitmq, release: sas-bshrabbitmq-<%= package_type %>}
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= rabbitmq_ip %>]
+
+- name: geode-locator
+  instances: 1 # DO NOT CHANGE
+  jobs:
+  - {name: install_java, release: sas-bshjava-<%= package_type %>}
+<% if stemcell == "ubuntu" %>
+  - {name: install_packages, release: sas-bshpkginst-<%= package_type %>}
+<% end %>
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  - name: cachelocator
+    release: sas-bshgeode-<%= package_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  vm_type: <%= vm_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= geode_locator_ip %>]
+
+- name: geode-cacheserver
+  instances: 1
+  jobs:
+  - {name: install_java, release: sas-bshjava-<%= package_type %>}
+<% if stemcell == "ubuntu" %>
+  - {name: install_packages, release: sas-bshpkginst-<%= package_type %>}
+<% end %>
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+  - name: cacheserver
+    release: sas-bshgeode-<%= package_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  vm_type: <%= vm_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= geode_server_ip %>]
+<% end %>
+
+- name: cas_controller
+  instances: 1 # DO NOT CHANGE
+  jobs:
+<% if programming_only == false %>
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+<% end %>
+  - {name: install_config_nfs, release: sas-bshnfs-<%= package_type %>}
+  - {name: install_config_sssd, release: sas-bshsssd-<%= package_type %>}
+  - {name: install_java, release: sas-bshjava-<%= package_type %>}
+  - {name: install_libpng, release: sas-bshlibpng-<%= package_type %>}
+  - {name: install_numa, release: sas-bshnuma-<%= package_type %>}
+<% if stemcell == "ubuntu" %>
+  - {name: install_packages, release: sas-bshpkginst-<%= package_type %>}
+<% end %>
+  - name: cas_controller
+    release: sas-bshvdmmlcas-<%= package_type %>
+    provides:
+      controller: {as: cas_controller}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= cas_controller_ip %>]
+  properties:
+    cas:
+      workerips: <%= cas_worker_ips %>
+      key: <%= cas_key %>
+      config:
+        mode: <%= cas_mode %>
+<% if programming_only == false %>
+        servicesbaseurl: <%= servicesbaseurl %>
+<% end %>
+<% if cas_mode == "mpp" %>
+        initialworkers: 1
+<% end %>
+
+<% if cas_mode == "mpp" %>
+- name: cas_worker
+  instances: <%= cas_worker_count %>
+  jobs:
+<%   if programming_only == false %>
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+<%   end %>
+  - {name: install_config_nfs, release: sas-bshnfs-<%= package_type %>}
+  - {name: install_config_sssd, release: sas-bshsssd-<%= package_type %>}
+  - {name: install_java, release: sas-bshjava-<%= package_type %>}
+  - {name: install_libpng, release: sas-bshlibpng-<%= package_type %>}
+  - {name: install_numa, release: sas-bshnuma-<%= package_type %>}
+<%   if stemcell == "ubuntu" %>
+  - {name: install_packages, release: sas-bshpkginst-<%= package_type %>}
+<%   end %>
+  - name: cas_worker
+    release: sas-bshvdmmlcas-<%= package_type %>
+    consumes:
+      controller: {from: cas_controller}
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  persistent_disk_type: <%= disk_type %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= cas_worker_ips %>]
+<% end %>
+
+- name: object_spawner
+  instances: 1 # DO NOT CHANGE
+  templates:
+<% if programming_only == false %>
+  - {name: consul, release: sas-bshconsul-<%= package_type %>}
+<% end %>
+  - {name: install_java, release: sas-bshjava-<%= package_type %>}
+  - {name: install_config_nfs, release: sas-bshnfs-<%= package_type %>}
+  - {name: install_config_sssd, release: sas-bshsssd-<%= package_type %>}
+  - {name: install_numa, release: sas-bshnuma-<%= package_type %>}
+  - {name: install_libpng, release: sas-bshlibpng-<%= package_type %>}
+<% if stemcell == "ubuntu" %>
+  - {name: install_packages, release: sas-bshpkginst-<%= package_type %>}
+<% end %>
+  - name: object_spawner
+    release: sas-bshvdmmlsas-<%= package_type %>
+    consumes:
+      cas: {from: cas_controller}
+<% if programming_only == false %>
+  - name: compute_server
+    release: sas-bshvdmmlsas-<%= package_type %>
+<% end %>
+  vm_type: <%= vm_type %>
+  stemcell: <%= stemcell %>
+  networks:
+  - name: <%= private_network_name %>
+    default: [dns, gateway]
+  - name: <%= public_network_name %>
+    static_ips: [<%= sas_ip %>]
+
+properties:
+  consul:
+    server: false
+    join_hosts:
+      - <%= consul_ip %>
+    tokens:
+      client: <%= consul_tokens_client %>
+    datacenter: <%= consul_datacenter %>
+  java_home: <%= java_home %>
+  sssd:
+    conf: |
+      TODO - Provide the contents of your desired sssd.conf file. This string will be
+      written directly to the /etc/sssd/sssd.conf file for use by the SSSD process.
+      Make sure the contents of the file are lined up under the 'n' in 'conf' above.
+    cert: |
+      -----BEGIN CERTIFICATE-----
+      TODO - If your SSSD configuration uses a directory server AND the directory
+      server uses TLS AND the server's TLS root CA is not trusted by the stemcell,
+      then this should contain the encoded certificate. This string will be written
+      to /etc/ssl/certs/sssd and can be consumed from that location in your sssd
+      configuration file defined below. Make sure the contents of the file are lined
+      up under the 'r' in 'cert' above.
+      -----END CERTIFICATE-----
+  nfs:
+    fstab: |
+      TODO - Provide the contents of your desired /etc/fstab additions. This string
+      will be appended to the existing /etc/fstab file and a mount request issued.
+      Make sure the contents of the file are lined up under the 't' in 'fstab' above.
+  sas:
+    logon:
+      initial:
+        password: <%= sas_logon_initial_pwd %>
+    services:
+      url: <%= servicesbaseurl %>
+    setinit:
+      text: |
+        TODO - Copy the contents of the license in the Software Order Email
+        to here. Make sure the contents of the file are lined up under
+        the 'x' in 'text' above.
+    programming:
+      only: <%= programming_only %>
+

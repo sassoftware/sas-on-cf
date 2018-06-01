@@ -1,0 +1,53 @@
+- type: replace
+  path: /instance_groups/name=consul/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((consul.ips))
+
+- type: replace
+  path: /instance_groups/name=postgresql/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((db.postgres.ips))
+
+- type: replace
+  path: /instance_groups/name=pgpool/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((db.pgpool.ips))
+
+- type: replace
+  path: /instance_groups/name=rabbitmq/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((rabbitmq.ips))
+
+- type: replace
+  path: /instance_groups/name=cachelocator/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((cache.locator.ips))
+
+- type: replace
+  path: /instance_groups/name=cacheserver/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((cache.server.ips))
+
+- type: replace
+  path: /instance_groups/name=cas_controller/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((cas.controller.ips))
+
+- type: replace
+  path: /instance_groups/name=cas_worker/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((cas.worker.ips))
+
+- type: replace
+  path: /instance_groups/name=spawner_compute/networks/-
+  value:
+    name: ((external_network_name))
+    static_ips: ((sas.spawner.ips))

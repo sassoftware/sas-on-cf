@@ -1,0 +1,22 @@
+- type: replace
+  path: /instance_groups/name=consul/properties/consul/key_value_data?
+  value: |
+    config:
+      application:
+        oauth2:
+          adminId: sas.oauth.admin
+          adminSecret: ((oauth2_admin_password))
+        sas:
+          url:
+            httpd: ((servicesbaseurl))
+        sas.identities.providers.ldap.connection:
+          host: ((ldap.host))
+          port: ((ldap.port))
+          userDN: ((ldap.user))
+          password: ((ldap.password))
+          url: ldap://\${sas.identities.providers.ldap.connection.host}:\${sas.identities.providers.ldap.connection.port}
+        sas.identities.providers.ldap.user:
+          baseDN: ((ldap.userBase))
+        sas.identities.providers.ldap.group:
+          baseDN: ((ldap.groupBase))
+
