@@ -1,4 +1,7 @@
-## Sample BOSH Manifests
+## Sample BOSH Manifests -- Archived repository
+----
+
+**Notice: This repository is intended for an older version of SAS Viya and is no longer relevant.**
 
 The viya-on-cf repository contains sample BOSH manifests for deploying SAS Viya
 software into a BOSH and Cloud Foundry environment.
